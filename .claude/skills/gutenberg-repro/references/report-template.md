@@ -9,7 +9,7 @@ The first non-blank line under the title must be the `**Verdict:**` line so the 
 
 **Verdict:** <Reproduced | Not reproduced | Inconclusive | Could not execute | Insufficient info | Out of scope>
 **Issue:** <full URL>
-**Tested against:** main @ <short SHA> (clean working tree)
+**Tested against:** trunk @ <short SHA> (clean working tree)
 **Env:** wp-env playground runtime, <fresh start | already running>
 **Attempts:** <n> of 3
 **Date:** <ISO 8601 timestamp>
@@ -38,7 +38,7 @@ The first non-blank line under the title must be the `**Verdict:**` line so the 
 ## Execution log
 
 ### Setup
-- `git pull --ff-only origin main` → up to date at `<sha>`
+- `git pull --ff-only origin trunk` → up to date at `<sha>`
 - `npm install` → <n> packages, <duration>
 - `npm run build` → ok in <duration>
 - `npm run wp-env start -- --runtime=playground` → <ok | already running>

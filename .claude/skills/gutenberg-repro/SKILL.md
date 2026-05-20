@@ -1,12 +1,12 @@
 ---
 name: gutenberg-repro
-description: This skill should be used ONLY when the user explicitly invokes the `/gutenberg-repro` slash command. Reproduces a WordPress/Gutenberg GitHub issue end-to-end against a fresh `main` build: reads issue body, comments, linked refs and images; synthesizes a structured repro plan; spins up wp-env with the Playground runtime; drives the editor via Playwright MCP for up to three attempts; and writes a markdown report with a five-state verdict and evidence. Do not auto-fire on conversational mentions of issues or bugs.
+description: This skill should be used ONLY when the user explicitly invokes the `/gutenberg-repro` slash command. Reproduces a WordPress/Gutenberg GitHub issue end-to-end against a fresh `trunk` build: reads issue body, comments, linked refs and images; synthesizes a structured repro plan; spins up wp-env with the Playground runtime; drives the editor via Playwright MCP for up to three attempts; and writes a markdown report with a five-state verdict and evidence. Do not auto-fire on conversational mentions of issues or bugs.
 version: 0.1.0
 ---
 
 # Gutenberg Repro
 
-Reproduce a Gutenberg GitHub issue against a freshly-pulled `main` and produce a structured markdown report. The skill is observational: it does not modify the codebase, does not author tests, and does not post to GitHub.
+Reproduce a Gutenberg GitHub issue against a freshly-pulled `trunk` (the WordPress/gutenberg default branch) and produce a structured markdown report. The skill is observational: it does not modify the codebase, does not author tests, and does not post to GitHub.
 
 ## Prerequisites
 
@@ -75,13 +75,13 @@ If no actionable plan can be synthesized (truly empty body, "fix the editor plea
 Refuse to proceed without explicit user consent under any of these conditions:
 
 - `git status --porcelain` is non-empty (dirty working tree).
-- Current branch is not `main` (`git rev-parse --abbrev-ref HEAD`).
-- `git pull --ff-only origin main` would fail (non-fast-forward).
+- Current branch is not `trunk` (`git rev-parse --abbrev-ref HEAD`). Note: WordPress/gutenberg uses `trunk` as its default branch, not `main`.
+- `git pull --ff-only origin trunk` would fail (non-fast-forward).
 
 When safe to proceed:
 
 ```bash
-git pull --ff-only origin main
+git pull --ff-only origin trunk
 npm install
 # Run composer install only if composer.lock changed in the pull
 npm run build
