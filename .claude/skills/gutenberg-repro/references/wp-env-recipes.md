@@ -8,6 +8,8 @@ The general shape:
 npm run wp-env run cli wp <wp-cli-command>
 ```
 
+> **Runtime note.** The `npm run wp-env run cli wp …` commands below require the Docker runtime. Under the Playground runtime (`npm run wp-env start -- --runtime=playground`) the `run` subcommand is unsupported — `wp-env` will print `✖ The 'run' command is not supported in the Playground runtime at the moment.` See "Playground fallbacks" at the bottom of this file.
+
 Log every command executed in the report's "Preconditions applied" section, along with an excerpt of its output.
 
 ## Default credentials
@@ -160,3 +162,29 @@ npm run wp-env run cli wp config get WP_DEBUG_LOG
 ```
 
 Run these at the end of preconditions setup to confirm the env is in the expected shape; capture relevant output in the execution log.
+
+## Playground fallbacks
+
+Under the Playground runtime, apply preconditions via wp-admin UI instead of WP-CLI. These flows are slower and less reliable than CLI, so prefer the Docker runtime when CLI is available.
+
+### Install a plugin from a local zip
+
+*Requires user consent — see SKILL.md Step 6.*
+
+1. Navigate to `http://localhost:8888/wp-admin/plugin-install.php?tab=upload`.
+2. Click the "Plugin zip file" button (opens the OS file chooser via Playwright).
+3. Call `browser_file_upload` with a path. Playwright MCP only accepts paths inside the project root or `.playwright-mcp/`; it rejects `/tmp/...`. Because staging files inside the checkout requires user consent, surface this trade-off to the user before proceeding.
+4. Click "Install Now".
+5. Click "Activate Plugin" on the success screen.
+
+### Toggle a setting via the Settings screens
+
+Navigate to `/wp-admin/options-general.php` (or the specific Settings sub-screen) and submit the form via Playwright. This works for everything exposed in `/wp-admin/options-*.php`.
+
+### Create / edit a post
+
+Use the editor itself and save via the UI — this is one of the few CLI-style flows with a clean UI alternative.
+
+### When no UI fallback exists
+
+If a precondition requires anything more invasive than the above (e.g., setting `gutenberg-experiments`, deleting user meta, switching to a theme that isn't installed), stop and tell the user the Playground runtime cannot apply it; suggest re-running under the Docker runtime.

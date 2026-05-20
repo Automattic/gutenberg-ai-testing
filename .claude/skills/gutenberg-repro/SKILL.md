@@ -94,7 +94,13 @@ Never run `wp-env destroy`, `wp-env clean`, `git reset --hard`, branch switches,
 
 ### Step 6 — Apply preconditions
 
-Apply preconditions via `npm run wp-env run cli wp …` before opening the browser. Common recipes live in `references/wp-env-recipes.md`. Log every command and its output excerpt in the execution log.
+Apply preconditions before opening the browser. The preferred mechanism is `npm run wp-env run cli wp …` (see `references/wp-env-recipes.md`).
+
+**Playground runtime caveat:** under `--runtime=playground`, `wp-env run` is unsupported and prints `✖ The 'run' command is not supported in the Playground runtime at the moment.` Use the wp-admin UI fallbacks documented in `references/wp-env-recipes.md` § Playground fallbacks instead.
+
+**Consent gate:** if a precondition requires `browser_file_upload` (e.g., uploading a test plugin zip), the file must be staged at a path inside the project root because Playwright MCP rejects paths outside its allowed roots (it accepts only the project root and `.playwright-mcp/`). Stop and ask the user for explicit consent before staging anything inside the checkout — same shape as the Step 5 dirty-tree gate. Do not silently write to `.playwright-mcp/` or anywhere else under the repo.
+
+Log every command (and every UI fallback) along with an output excerpt in the execution log.
 
 ### Step 7 — Execute the repro
 

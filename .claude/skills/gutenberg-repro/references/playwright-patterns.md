@@ -49,7 +49,7 @@ Use `browser_take_screenshot()` only at the moments the SKILL prescribes:
 - One bug-state screenshot when an attempt reproduces (saved to `<temp-dir>/bug-state.png`).
 - One final-state screenshot from the last attempt when the overall verdict is `Not reproduced` or `Could not execute` (saved to `<temp-dir>/final-state.png`).
 
-Pass an absolute `filename` to `browser_take_screenshot` so the file lands in the temp dir directly.
+**Path sandbox.** Playwright MCP only accepts file paths inside the project root or `.playwright-mcp/`; `/tmp/...` is rejected. Pass a project-relative filename to `browser_take_screenshot` (e.g., `bug-state.png`), then `mv` the file into the report temp dir after the call returns. The same sandbox applies to `browser_file_upload` — see `references/wp-env-recipes.md` § Playground fallbacks.
 
 ## Common editor entry points
 
