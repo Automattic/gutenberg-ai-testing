@@ -20,7 +20,7 @@ Tested against Gutenberg `trunk` on hosted Playground · <n> attempt(s) · <dura
 
 </details>
 
-<sub>Automated by `/gutenberg-repro` (CI mode). Re-run by removing and re-adding the `ai-reproduce` label. Screenshots and machine-grep logs are uploaded as workflow artifacts on the run.</sub>
+<sub>Automated by `/gutenberg-repro` (CI mode). Re-run by removing and re-adding the `ai-reproduce` label. Screenshots and machine-grep logs are available as [workflow artifacts on this run](<run-url>).</sub>
 ```
 
 ## Constraints
@@ -30,6 +30,7 @@ Tested against Gutenberg `trunk` on hosted Playground · <n> attempt(s) · <dura
 - **One-sentence summary.** ≤200 chars. For `Reproduced`: what was observed. For `Not reproduced`: what was tried.
 - **Metadata line.** `Tested against Gutenberg \`trunk\` on hosted Playground · <n> attempt(s) · <duration>` — `<n>` is the number of attempts actually executed (1–3), `<duration>` is wall-clock from start of Step 5 to end of Step 7 formatted as `<m>m<s>s` (e.g., `4m17s`). If the plan used `gutenberg-pr=<n>` instead, replace `\`trunk\`` with `PR #<n>` so the comment surfaces the divergence.
 - **No embedded screenshots.** GitHub issue comments cannot reference local files. v1 keeps screenshots in the workflow artifact and lets the trailer line direct readers there. Don't try to embed images via base64 or external image hosts.
+- **Run URL.** Substitute `<run-url>` in the trailer with `$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID` (all three are set by GitHub Actions on every runner). The Artifacts section is at the bottom of that run page.
 - **Full report rendered verbatim.** Inside the `<details>` block, render the entire content of `report.md` as produced per `references/report-template.md`. Do not restructure or trim.
 - **Pre-fold byte budget.** Everything above `<details>` should fit in roughly 600 chars including the verdict, summary sentence, and metadata line. If the summary sentence runs long, cut it — the full report has the detail.
 
