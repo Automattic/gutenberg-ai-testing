@@ -7,11 +7,13 @@ on:
 permissions:
     contents: read
     issues: write
-    id-token: write
 
 concurrency:
     group: gutenberg-repro-${{ github.event.issue.number }}
     cancel-in-progress: false
+
+env:
+    PLAYWRIGHT_MCP_VERSION: 0.0.75
 
 jobs:
     repro:
@@ -22,15 +24,35 @@ jobs:
             GUTENBERG_REPRO_CI: '1'
             GUTENBERG_REPRO_ISSUE: ${{ github.event.issue.html_url }}
             TARGET_REPO: ${{ github.repository }}
+            ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         steps:
-            - uses: actions/checkout@v4
+            - name: Guard missing ANTHROPIC_API_KEY
+              if: ${{ env.ANTHROPIC_API_KEY == '' }}
+              run: |
+                  echo "::error::ANTHROPIC_API_KEY is not configured; cannot run repro."
+                  exit 1
 
-            - uses: actions/setup-node@v4
+            - name: Acknowledge label with eyes reaction
+              env:
+                  GH_TOKEN: ${{ github.token }}
+              run: |
+                  gh api \
+                      --method POST \
+                      -H "Accept: application/vnd.github+json" \
+                      "/repos/${{ github.repository }}/issues/${{ github.event.issue.number }}/reactions" \
+                      -f content='eyes' || true
+
+            - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+              with:
+                  show-progress: ${{ runner.debug == '1' && 'true' || 'false' }}
+                  persist-credentials: false
+
+            - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
               with:
                   node-version-file: '.nvmrc'
 
-            - name: Install Playwright browsers
-              run: npx --yes playwright install --with-deps chromium
+            - name: Install Playwright Chromium (matched to MCP version)
+              run: npx --yes --package=@playwright/mcp@${{ env.PLAYWRIGHT_MCP_VERSION }} -- playwright install chromium
 
             - name: Prepare workspace
               run: |
@@ -38,12 +60,12 @@ jobs:
                   mkdir -p "$RUNNER_TEMP/gutenberg-repro"
 
             - name: Run Claude repro
-              uses: anthropics/claude-code-action@v1
+              uses: anthropics/claude-code-action@20c8abf165d5f85ab3fc970db9498436377dc9d1 # v1
               with:
                   anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
                   github_token: ${{ github.token }}
                   claude_args: |
-                      --mcp-config '{"mcpServers":{"playwright":{"command":"npx","args":["-y","@playwright/mcp@latest"]}}}'
+                      --mcp-config '{"mcpServers":{"playwright":{"command":"npx","args":["-y","@playwright/mcp@${{ env.PLAYWRIGHT_MCP_VERSION }}"]}}}'
                       --allowedTools mcp__playwright__browser_navigate,mcp__playwright__browser_snapshot,mcp__playwright__browser_click,mcp__playwright__browser_type,mcp__playwright__browser_fill_form,mcp__playwright__browser_press_key,mcp__playwright__browser_evaluate,mcp__playwright__browser_wait_for,mcp__playwright__browser_console_messages,mcp__playwright__browser_network_requests,mcp__playwright__browser_take_screenshot,mcp__playwright__browser_close,Bash,Read,Write,Edit
                   prompt: |
                       Invoke the /gutenberg-repro skill against issue ${{ github.event.issue.html_url }}.
@@ -52,9 +74,10 @@ jobs:
                       Follow the Execution mode section in SKILL.md: no consent gates, auto-proceed on low confidence with a flag in the report, tear down cleanly at the end (browser_close), and post the comment per Step 8.5's gating (Reproduced/Not reproduced AND source repo == $TARGET_REPO).
 
             - name: Upload artifacts
-              if: always()
-              uses: actions/upload-artifact@v4
+              if: ${{ always() }}
+              uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
               with:
-                  name: gutenberg-repro-${{ github.event.issue.number }}
+                  name: gutenberg-repro-${{ github.event.issue.number }}-${{ github.run_id }}
                   path: ${{ env.GUTENBERG_REPRO_WORKSPACE }}
                   retention-days: 14
+                  if-no-files-found: ignore
