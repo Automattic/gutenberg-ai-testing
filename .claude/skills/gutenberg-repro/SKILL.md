@@ -1,7 +1,7 @@
 ---
 name: gutenberg-repro
-description: This skill should be used when the user explicitly invokes the `/gutenberg-repro` slash command OR when invoked by the `ai-reproduce` label workflow (CI mode, signalled by `GUTENBERG_REPRO_CI=1`). Reproduces a WordPress/Gutenberg GitHub issue end-to-end against a fresh `trunk` build: reads issue body, comments, linked refs and images; synthesizes a structured repro plan; spins up wp-env with the Playground runtime; drives the editor via Playwright MCP for up to three attempts; and writes a markdown report with a five-state verdict and evidence. Do not auto-fire on conversational mentions of issues or bugs in interactive mode.
-version: 0.2.0
+description: This skill should be used when the user explicitly invokes the `/gutenberg-repro` slash command OR when invoked by the `ai-reproduce` label workflow (CI mode, signalled by `GUTENBERG_REPRO_CI=1`). Reproduces a WordPress/Gutenberg GitHub issue end-to-end against a fresh `trunk` Gutenberg build hosted on `playground.wordpress.net`: reads issue body, comments, linked refs and images; synthesizes a structured repro plan; builds a Playground URL (with a Blueprint when preconditions require it); drives the editor via Playwright MCP for up to three attempts; and writes a markdown report with a five-state verdict and evidence. Do not auto-fire on conversational mentions of issues or bugs in interactive mode.
+version: 0.3.0
 argument-hint: <github-issue-url-or-number>
 arguments:
   - name: issue
@@ -16,15 +16,17 @@ arguments:
 
 # Gutenberg Repro
 
-Reproduce a Gutenberg GitHub issue against a freshly-pulled `trunk` (the WordPress/gutenberg default branch) and produce a structured markdown report. The skill is observational: it does not modify the codebase and does not author tests. In interactive mode it does not post to GitHub; in CI mode it may post a single comment per the gating rules below.
+Reproduce a Gutenberg GitHub issue against fresh `trunk` Gutenberg (the WordPress/gutenberg default branch) running on hosted WordPress Playground (`https://playground.wordpress.net/?gutenberg-branch=trunk`), and produce a structured markdown report. The skill is observational: it does not modify any codebase and does not author tests. In interactive mode it does not post to GitHub; in CI mode it may post a single comment per the gating rules below.
+
+The skill targets **hosted Playground** — no local WordPress checkout, no wp-env, no `npm run build`, no port allocation. The browser navigates to a single Playground URL that encodes everything: Gutenberg branch, login, landing page, and any preconditions (as a Blueprint in the URL fragment).
 
 ## Execution mode
 
 The skill runs in one of two modes; they share the same workflow but fork on a handful of gates and the tail-end behavior. Detect mode at the start of the run and store the result in TodoWrite so every subsequent step references the same value.
 
-**Interactive mode (default).** Triggered when the user explicitly types `/gutenberg-repro` in Claude Code. All consent gates fire; the browser, wp-env, and the temp dir are left running so the user can inspect; nothing is posted to GitHub.
+**Interactive mode (default).** Triggered when the user explicitly types `/gutenberg-repro` in Claude Code. All consent gates fire; the browser is left running so the user can inspect; nothing is posted to GitHub.
 
-**CI mode.** Triggered when the environment variable `GUTENBERG_REPRO_CI=1` is set. The action invokes the skill via a prompt; gates that would block on user consent become hard assertions; the browser is closed and wp-env stopped at the end; a single comment may be posted to the source issue per Step 8.5's gating.
+**CI mode.** Triggered when the environment variable `GUTENBERG_REPRO_CI=1` is set. The action invokes the skill via a prompt; gates that would block on user consent become hard assertions; the browser is closed at the end; a single comment may be posted to the source issue per Step 8.5's gating.
 
 CI mode reads two additional environment variables:
 
@@ -33,18 +35,17 @@ CI mode reads two additional environment variables:
 
 If `GUTENBERG_REPRO_CI` is set but `GUTENBERG_REPRO_ISSUE` or `GUTENBERG_REPRO_WORKSPACE` is missing, write a `Could not execute` report explaining the missing env var, skip posting (Step 8.5 gating prevents it anyway), and exit non-zero.
 
-In interactive mode, all three vars are unset and behavior is identical to v0.1.
+In interactive mode, all three vars are unset.
 
 Below, behavior unique to CI mode is called out under each step with an "**In CI mode:**" callout. If a step has no callout, behavior is identical in both modes.
 
 ## Prerequisites
 
-- Current working directory must be the WordPress/Gutenberg checkout (a Gutenberg fork's trunk also works).
 - `gh` CLI authenticated. In CI, the workflow exports `GH_TOKEN=${{ github.token }}` so `gh` is already auth'd.
 - Playwright MCP tools available. The tool prefix depends on mode — see `references/playwright-patterns.md` § Tool naming across modes.
-- Node, npm, composer installed.
+- Network reachability to `https://playground.wordpress.net/`. Playground runs in the browser, but the initial asset load requires outbound HTTPS to that origin.
 
-If any prerequisite is missing in interactive mode, stop and tell the user. In CI mode, write a `Could not execute` report explaining which prerequisite is missing and exit non-zero.
+No Node, npm, composer, PHP, Docker, or WordPress checkout is required. If any prerequisite above is missing in interactive mode, stop and tell the user. In CI mode, write a `Could not execute` report explaining which prerequisite is missing and exit non-zero.
 
 ## Workflow
 
@@ -81,7 +82,7 @@ Stop with verdict **Out of scope** and an explanatory note in the report when an
 - Pull all comments: `gh issue view <ref> --repo WordPress/gutenberg --comments`.
 - Identify linked references (`#1234`, full URLs, `WordPress/gutenberg#1234`) in the body and in each comment. Fetch each linked issue/PR **one hop only** — do not follow links found inside linked refs.
 - Parse markdown image references and HTML `<img>` tags from body and comments. Collect image URLs.
-- Download each image into the temp dir (see Step 8 for path).
+- Download each image into the workspace dir (see Step 8 for path).
 - Load downloaded images into context for plan synthesis. Skip videos and GIFs — note their presence in the report but do not attempt to consume them.
 
 ### Step 4 — Synthesize the repro plan
@@ -107,63 +108,29 @@ If confidence is `low`, present the plan to the user and wait for confirmation b
 
 If no actionable plan can be synthesized (truly empty body, "fix the editor please" content), write the report with verdict **Insufficient info** and stop.
 
-### Step 5 — Prepare the environment
+### Step 5 — Build the Playground URL
 
-Refuse to proceed without explicit user consent under any of these conditions:
+Translate the plan's preconditions into a single Playground URL. There is no environment to start, no checkout to update, no port to allocate.
 
-- `git status --porcelain` is non-empty (dirty working tree).
-- Current branch is not `trunk` (`git rev-parse --abbrev-ref HEAD`). Note: WordPress/gutenberg uses `trunk` as its default branch, not `main`.
-- `git pull --ff-only origin trunk` would fail (non-fast-forward).
+1. Start from the base: `https://playground.wordpress.net/?gutenberg-branch=trunk&login=yes&networking=yes`.
+2. Set the `url=` query param to the landing page implied by the plan (typically `/wp-admin/post-new.php`; see the entry-points table in `references/playwright-patterns.md`).
+3. For each precondition expressible as a Query API param (theme, plugin from wp.org, multisite, locale, PHP/WP versions), append the param. See `references/playground-url-builder.md` for the full param list.
+4. For preconditions that require a Blueprint (seeded post content, `setSiteOptions`, `gutenberg-experiments`, `runPHP`, `defineWpConfigConsts`, custom plugin from a URL), build a Blueprint JSON object using the step shapes in `references/blueprint-recipes.md` and append it as a URL fragment — either inline JSON (small) or base64-encoded (large or noisy).
+5. Log the full URL and, if a Blueprint was used, the decoded Blueprint JSON to the report's Setup section. The URL is the only record of what preconditions were applied — without it the repro is not replayable.
 
-When safe to proceed:
+If a precondition genuinely can't be expressed in the Query API or a Blueprint step (e.g., a private plugin zip with no public URL), see "Last-resort UI fallback" in `references/blueprint-recipes.md`. **In CI mode**, that path is closed — write a `Could not execute` report explaining the unsupported precondition and stop. Step 8.5 will skip posting per its gating.
 
-```bash
-git pull --ff-only origin trunk
-npm install
-# Run composer install only if composer.lock changed in the pull
-npm run build
-```
+Skip this step's URL construction for verdicts already determined (Step 2 `Out of scope`, Step 4 `Insufficient info`) — go straight to Step 8.
 
-**In CI mode:** treat the three gates above as assertions, not prompts — the workflow checks out a fresh tree at the workflow ref, so any failure is unexpected. If any assertion fails: write a `Could not execute` report with the failing assertion in the `Notes` section and exit non-zero (Step 8.5 will skip posting per its gating). Also skip the `git pull` and `npm install` lines above — the workflow already ran `actions/checkout` and `npm ci`. Proceed directly to the port-allocation block below.
+### Step 6 — Stage local files (only if needed)
 
-**Allocate a random free port** before starting wp-env to avoid conflicts with any other wp-env instance the user may have running on the default 8888/8889. Pick a port in 20000–60000:
+This step exists only for the rare path where a precondition needs `browser_file_upload` (the last-resort UI fallback described in `references/blueprint-recipes.md`). For typical repros, skip it.
 
-```bash
-# Pick a free port (and a separate tests port wp-env demands even when unused).
-python3 -c 'import socket
-def f():
-    s = socket.socket(); s.bind(("", 0)); p = s.getsockname()[1]; s.close(); return p
-print(f(), f())'
-```
+**Path sandbox.** Playwright MCP only accepts file paths inside the project root or `.playwright-mcp/`; arbitrary `/tmp/...` paths are rejected. If you must stage a file for upload, that means writing inside the working directory.
 
-Capture both numbers. Throughout the rest of this session:
+**Consent gate (interactive mode):** stop and ask the user for explicit consent before staging anything inside the working directory. Do not silently write to `.playwright-mcp/`.
 
-- `<port>` is the site port; `<tests-port>` is the tests port.
-- **Every** wp-env command must be prefixed `WP_ENV_PORT=<port> WP_ENV_TESTS_PORT=<tests-port>` because each `Bash` invocation is a fresh shell — env vars do not persist between calls.
-- **Every** browser URL must use `http://localhost:<port>`. The site is not reachable on 8888 in this session.
-- Record `<port>` and `<tests-port>` in the report's "Setup" log so the user can inspect the env afterward.
-
-Start wp-env with the allocated ports:
-
-```bash
-WP_ENV_PORT=<port> WP_ENV_TESTS_PORT=<tests-port> npm run wp-env start -- --runtime=playground
-```
-
-Skip the pre-start `wp-env status` check — with a freshly allocated port nothing can be running on it, so the call adds noise without information.
-
-Never run `wp-env destroy`, `wp-env clean`, `git reset --hard`, branch switches, or any other destructive operation without explicit user consent.
-
-### Step 6 — Apply preconditions
-
-Apply preconditions before opening the browser. The preferred mechanism is `npm run wp-env run cli wp …` (see `references/wp-env-recipes.md`).
-
-**Playground runtime caveat:** under `--runtime=playground`, `wp-env run` is unsupported and prints `✖ The 'run' command is not supported in the Playground runtime at the moment.` Use the wp-admin UI fallbacks documented in `references/wp-env-recipes.md` § Playground fallbacks instead.
-
-**Consent gate:** if a precondition requires `browser_file_upload` (e.g., uploading a test plugin zip), the file must be staged at a path inside the project root because Playwright MCP rejects paths outside its allowed roots (it accepts only the project root and `.playwright-mcp/`). Stop and ask the user for explicit consent before staging anything inside the checkout — same shape as the Step 5 dirty-tree gate. Do not silently write to `.playwright-mcp/` or anywhere else under the repo.
-
-**In CI mode:** there is no user to consent. If a precondition requires `browser_file_upload`, write a `Could not execute` report explaining the unsupported precondition and stop. Step 8.5 will skip posting per its gating.
-
-Log every command (and every UI fallback) along with an output excerpt in the execution log.
+**In CI mode:** if a precondition requires staging a local file, write a `Could not execute` report explaining the unsupported precondition and stop.
 
 ### Step 7 — Execute the repro
 
@@ -172,13 +139,13 @@ Run up to 3 attempts. Stop the loop as soon as one attempt reproduces the bug.
 For each attempt:
 
 1. Open a fresh browser context via Playwright MCP.
-2. Log in through the UI: navigate to `http://localhost:<port>/wp-login.php`, fill `admin` / `password`, submit. Hide this in the execution log unless it fails.
+2. Navigate to the Playground URL built in Step 5. With `login=yes` (or `"login": true` in a Blueprint) Playground auto-logs in as `admin` — there is no `wp-login.php` step.
 3. Subscribe to console messages and network errors. Filter to entries that mention `wp-`, `gutenberg`, `@wordpress/`, or files under `/wp-content/` or `/wp-includes/`. Discard the rest.
-4. Navigate to the start URL implied by the plan (often `http://localhost:<port>/wp-admin/post-new.php`).
-5. Execute the plan's steps. Apply a 10-second timeout per step and a 90-second total cap per attempt.
+4. Wait for the editor to mount (see `references/playwright-patterns.md` § Editor stability waits). Playground's initial WASM boot is slower than local Apache — allow up to 30 seconds for the first navigation; subsequent in-app navigations are fast.
+5. Execute the plan's steps. Apply a 10-second timeout per step and a 120-second total cap per attempt (longer than the previous wp-env cap to absorb WASM cold-start cost).
 6. After the final step, observe the resulting state and compare against `expected` and `actual` from the plan.
 7. Record per-attempt outcome: `reproduced`, `not reproduced`, `timeout`, or `error (<message>)`.
-8. On `reproduced`, capture a screenshot via `browser_take_screenshot` to `<temp-dir>/bug-state.png`, then break the loop.
+8. On `reproduced`, capture a screenshot via `browser_take_screenshot` to `bug-state.png` and `mv` it into the workspace dir, then break the loop.
 
 After the loop, compute the overall verdict:
 
@@ -189,13 +156,13 @@ After the loop, compute the overall verdict:
 | All attempts ended in `timeout` or `error`   | Could not execute   |
 | Mix of `not reproduced` and `error`/`timeout`| Inconclusive        |
 
-If verdict is **Not reproduced** or **Could not execute**, capture a final-state screenshot from the last attempt to `<temp-dir>/final-state.png`.
+If verdict is **Not reproduced** or **Could not execute**, capture a final-state screenshot from the last attempt to `final-state.png`.
 
-For detailed Playwright MCP usage (login flow, common selectors, screenshot conventions, accessibility snapshots), see `references/playwright-patterns.md`.
+For detailed Playwright MCP usage (common selectors, screenshot conventions, accessibility snapshots), see `references/playwright-patterns.md`.
 
 ### Step 8 — Write the report
 
-Create the temp dir:
+Create the workspace dir:
 
 ```bash
 mkdir -p /tmp/gutenberg-repro/<issue-number>-<YYYYMMDD-HHMMSS>/
@@ -203,7 +170,7 @@ mkdir -p /tmp/gutenberg-repro/<issue-number>-<YYYYMMDD-HHMMSS>/
 
 **In CI mode:** use `$GUTENBERG_REPRO_WORKSPACE/<issue-number>-<YYYYMMDD-HHMMSS>/` instead. The workflow uploads this directory as an artifact, so any path under `$GUTENBERG_REPRO_WORKSPACE` is preserved.
 
-Render `report.md` using the structure in `references/report-template.md`. Copy any downloaded issue attachments into the same directory and reference them by relative path. Print the absolute path to `report.md` in the conversation, along with a one-line summary of the verdict.
+Render `report.md` using the structure in `references/report-template.md`. Copy any downloaded issue attachments and screenshots into the same directory and reference them by relative path. Print the absolute path to `report.md` in the conversation, along with a one-line summary of the verdict.
 
 **In CI mode:** also render `comment-body.md` in the same directory, following `references/comment-summary-template.md`. The file contains the short visible verdict block followed by a `<details><summary>Full report</summary>…</details>` wrapper around the verbatim content of `report.md`.
 
@@ -226,24 +193,26 @@ When either condition fails, log a single line `comment suppressed: <reason>` to
 
 ### Step 9 — Leave running
 
-Do not close the browser. Do not stop wp-env. Do not delete the temp dir. Do not undo seeded content. The user may want to inspect the buggy state interactively.
+Do not close the browser. Do not delete the workspace dir. Do not undo seeded content. The user may want to inspect the buggy state interactively. There is no wp-env to stop.
 
-**In CI mode:** tear down cleanly instead. Call `browser_close`. Run `WP_ENV_PORT=<port> WP_ENV_TESTS_PORT=<tests-port> npm run wp-env stop` (best-effort — the workflow has a `wp-env stop || true` teardown step as a backstop). Leave `$GUTENBERG_REPRO_WORKSPACE` alone — the workflow's `actions/upload-artifact` step uploads it.
+**In CI mode:** tear down cleanly instead. Call `browser_close`. Leave `$GUTENBERG_REPRO_WORKSPACE` alone — the workflow's `actions/upload-artifact` step uploads it.
 
 ## Rigid rules
 
 These constraints override any apparent shortcut:
 
-- Never run `git reset --hard`, `git checkout` of branches, `git stash`, `wp-env destroy`, `wp-env clean`, or any other destructive command. In interactive mode, only on explicit user consent; in CI mode, never — the workspace is ephemeral and the workflow handles cleanup.
-- Never modify, create, or commit files inside the Gutenberg checkout (no `.spec.js`, no patches, no scratch files). The workspace path (`$GUTENBERG_REPRO_WORKSPACE` in CI, `/tmp/gutenberg-repro/...` interactively) is the only place to write.
-- Never log in by injecting cookies, minting nonces, or using application passwords — use the `wp-login.php` form.
+- Never modify, create, or commit files in the current working directory unless Step 6's consent gate has fired (and only inside `.playwright-mcp/` or a staging path the user approved). The workspace path (`$GUTENBERG_REPRO_WORKSPACE` in CI, `/tmp/gutenberg-repro/...` interactively) is the only place to write reports and screenshots.
+- Never write a `.spec.js`, patch, or scratch file anywhere — this skill is observational. Authoring tests belongs to `/gutenberg-fix`.
+- Never log in by injecting cookies, minting nonces, or using application passwords. Either Playground auto-login (`login=yes`) or the `wp-login.php` form.
 - Never auto-fire on conversational mentions of issues in interactive mode. Only run when the user explicitly types `/gutenberg-repro`. CI invocation is explicit (a workflow prompt) and not a conversational mention.
 - Never re-attempt after a successful reproduction.
 - Never post to GitHub except in CI mode, only to the repo the workflow targets, and only when the verdict is `Reproduced` or `Not reproduced` (see Step 8.5).
+- Never embed credentials or secrets in `runPHP` blocks — the Blueprint URL is logged to the report.
 
 ## Additional resources
 
 - **`references/report-template.md`** — Exact structure for `report.md`.
 - **`references/comment-summary-template.md`** — Shape of `comment-body.md` (CI mode only): short visible verdict block + `<details>` wrapper around the full report.
-- **`references/wp-env-recipes.md`** — Copy-paste WP-CLI invocations for common preconditions (theme switch, create post with content, set user role, install pattern, toggle experiments).
-- **`references/playwright-patterns.md`** — Login flow details, common Gutenberg editor selectors, accessibility-snapshot conventions, console-error filtering rules. Tool naming differs between interactive and CI mode — see the file's intro.
+- **`references/playground-url-builder.md`** — Playground Query API params and Blueprint fragment encoding. The single source of truth for URL construction in Step 5.
+- **`references/blueprint-recipes.md`** — Copy-paste Blueprint step JSON for common preconditions (seeded post, theme/plugin install, options, experiments, wp-config consts).
+- **`references/playwright-patterns.md`** — Common Gutenberg editor selectors, accessibility-snapshot conventions, console-error filtering rules, screenshot path sandbox. Tool naming differs between interactive and CI mode — see the file's intro.

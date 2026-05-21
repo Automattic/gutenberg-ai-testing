@@ -11,7 +11,7 @@ The visible part above the fold must be scannable from the issue feed — keep i
 
 <one-sentence summary, ≤200 chars>
 
-Tested against `trunk` @ `<short SHA>` · <n> attempt(s) · <duration>
+Tested against Gutenberg `trunk` on hosted Playground · <n> attempt(s) · <duration>
 
 <details>
 <summary>Full report</summary>
@@ -28,7 +28,7 @@ Tested against `trunk` @ `<short SHA>` · <n> attempt(s) · <duration>
 - **Verdict line.** Exactly one of `Reproduced` or `Not reproduced` — these are the only verdicts that produce a comment in CI mode. Other verdicts skip posting entirely (see SKILL.md Step 8.5).
 - **Low-confidence suffix.** If Step 4 auto-proceeded on `low` confidence, append the literal `[low confidence]` after the verdict word: `**Verdict: Reproduced [low confidence]**`. The `Notes` section of the embedded report.md must explain why.
 - **One-sentence summary.** ≤200 chars. For `Reproduced`: what was observed. For `Not reproduced`: what was tried.
-- **Metadata line.** `Tested against \`trunk\` @ \`<sha>\` · <n> attempt(s) · <duration>` — `<sha>` is the short SHA from `git rev-parse --short HEAD`, `<n>` is the number of attempts actually executed (1–3), `<duration>` is wall-clock from start of Step 5 to end of Step 7 formatted as `<m>m<s>s` (e.g., `4m17s`).
+- **Metadata line.** `Tested against Gutenberg \`trunk\` on hosted Playground · <n> attempt(s) · <duration>` — `<n>` is the number of attempts actually executed (1–3), `<duration>` is wall-clock from start of Step 5 to end of Step 7 formatted as `<m>m<s>s` (e.g., `4m17s`). If the plan used `gutenberg-pr=<n>` instead, replace `\`trunk\`` with `PR #<n>` so the comment surfaces the divergence.
 - **No embedded screenshots.** GitHub issue comments cannot reference local files. v1 keeps screenshots in the workflow artifact and lets the trailer line direct readers there. Don't try to embed images via base64 or external image hosts.
 - **Full report rendered verbatim.** Inside the `<details>` block, render the entire content of `report.md` as produced per `references/report-template.md`. Do not restructure or trim.
 - **Pre-fold byte budget.** Everything above `<details>` should fit in roughly 600 chars including the verdict, summary sentence, and metadata line. If the summary sentence runs long, cut it — the full report has the detail.

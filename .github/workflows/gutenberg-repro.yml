@@ -28,23 +28,9 @@ jobs:
             - uses: actions/setup-node@v4
               with:
                   node-version-file: '.nvmrc'
-                  cache: 'npm'
-
-            - uses: shivammathur/setup-php@v2
-              with:
-                  php-version: '8.2'
-                  tools: composer
-
-            - name: Install dependencies
-              run: |
-                  npm ci
-                  composer install --no-interaction --prefer-dist
-
-            - name: Build
-              run: npm run build
 
             - name: Install Playwright browsers
-              run: npx playwright install --with-deps chromium
+              run: npx --yes playwright install --with-deps chromium
 
             - name: Prepare workspace
               run: |
@@ -62,7 +48,8 @@ jobs:
                   prompt: |
                       Invoke the /gutenberg-repro skill against issue ${{ github.event.issue.html_url }}.
                       CI mode is active (GUTENBERG_REPRO_CI=1, GUTENBERG_REPRO_ISSUE, GUTENBERG_REPRO_WORKSPACE all set).
-                      Follow the Execution mode section in SKILL.md: no consent gates, auto-proceed on low confidence with a flag in the report, tear down cleanly at the end, and post the comment per Step 8.5's gating (Reproduced/Not reproduced AND source repo == $TARGET_REPO).
+                      The skill targets hosted WordPress Playground (playground.wordpress.net) — no wp-env, no local build.
+                      Follow the Execution mode section in SKILL.md: no consent gates, auto-proceed on low confidence with a flag in the report, tear down cleanly at the end (browser_close), and post the comment per Step 8.5's gating (Reproduced/Not reproduced AND source repo == $TARGET_REPO).
 
             - name: Upload artifacts
               if: always()
@@ -71,7 +58,3 @@ jobs:
                   name: gutenberg-repro-${{ github.event.issue.number }}
                   path: ${{ env.GUTENBERG_REPRO_WORKSPACE }}
                   retention-days: 14
-
-            - name: Teardown (best-effort)
-              if: always()
-              run: npm run wp-env stop || true

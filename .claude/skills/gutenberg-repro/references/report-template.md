@@ -9,8 +9,7 @@ The first non-blank line under the title must be the `**Verdict:**` line so the 
 
 **Verdict:** <Reproduced | Not reproduced | Inconclusive | Could not execute | Insufficient info | Out of scope>
 **Issue:** <full URL>
-**Tested against:** trunk @ <short SHA> (clean working tree)
-**Env:** wp-env playground runtime, <fresh start | already running>
+**Tested against:** Gutenberg `trunk` on hosted WordPress Playground (`playground.wordpress.net`)
 **Attempts:** <n> of 3
 **Date:** <ISO 8601 timestamp>
 
@@ -24,7 +23,7 @@ The first non-blank line under the title must be the `**Verdict:**` line so the 
 
 **Preconditions:**
 - <e.g., Theme: Twenty Twenty-Five>
-- <e.g., User: administrator (default wp-env admin)>
+- <e.g., User: administrator (Playground default admin)>
 - <e.g., A post containing a Cover block with an image>
 
 **Steps:**
@@ -38,14 +37,15 @@ The first non-blank line under the title must be the `**Verdict:**` line so the 
 ## Execution log
 
 ### Setup
-- `git pull --ff-only origin trunk` → up to date at `<sha>`
-- `npm install` → <n> packages, <duration>
-- `npm run build` → ok in <duration>
-- Allocated ports: site `<port>`, tests `<tests-port>` (random free ports; site reachable at `http://localhost:<port>`)
-- `WP_ENV_PORT=<port> WP_ENV_TESTS_PORT=<tests-port> npm run wp-env start -- --runtime=playground` → <ok | already running>
+- Playground URL: `<full URL navigated to in Step 7, including query params and fragment>`
+- Blueprint (decoded, only if a Blueprint fragment was used):
+  ```json
+  { "landingPage": "...", "login": true, "steps": [ ... ] }
+  ```
 
 ### Preconditions applied
-- `npm run wp-env run cli wp <…>` → <output excerpt>
+- Via Query API: <list of params used, e.g. `theme=twentytwentyfive`, `plugin=classic-editor`>
+- Via Blueprint steps: <list of step types used, e.g. `runPHP` seeded a draft post, `setSiteOptions` toggled `gutenberg-experiments`>
 - ...
 
 ### Attempt 1
@@ -77,7 +77,8 @@ The first non-blank line under the title must be the `**Verdict:**` line so the 
 ## Notes on filling the template
 
 - **Verdict line:** exactly one of the six values, no qualifiers. Caveats go in `Notes`.
-- **Tested against:** include `(dirty working tree)` or `(branch: <name>)` if Step 5's refusal was overridden by the user — never silently hide this.
+- **Tested against:** if the plan used `gutenberg-pr=<n>` instead of `gutenberg-branch=trunk`, change the line to `Gutenberg PR #<n> on hosted WordPress Playground` so a reader knows the test environment differed. Also note any non-default `wp=` or `php=` pin.
+- **Playground URL:** log the exact URL navigated to, including query params and fragment. The URL is the replay handle — without it the repro can't be re-run. If the Blueprint was base64-encoded, log the decoded JSON below the URL.
 - **Confidence:** if `low`, the `Notes` section must briefly explain why.
 - **Filtered errors:** include the matched substring that caused the filter to admit the message (e.g., `[wp.blockEditor] …`), so a reviewer can sanity-check the filter.
 - **Outcome strings:** stick to the exact strings `reproduced`, `not reproduced`, `timeout (step <n>)`, `error: <msg>` for machine-grepping later.

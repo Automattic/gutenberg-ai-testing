@@ -28,22 +28,13 @@ The relevant Playwright MCP tools:
 - `browser_network_requests()` — read accumulated network requests
 - `browser_close()` — close the browser session. In interactive mode the skill does NOT call this (see SKILL.md Step 9 "Leave running"); in CI mode the skill DOES call it as part of teardown.
 
-## Login flow
+## Login
 
-Always log in through the UI form. Do not inject cookies, mint nonces, or use application passwords. `<port>` is the session-specific port allocated in SKILL.md Step 5 — wp-env is not running on 8888 in this session.
+The skill runs against hosted Playground with `login=yes` in the URL (or `"login": true` in the Blueprint), which auto-logs in as `admin` / `password` before the first page renders. There is no `wp-login.php` step.
 
-```
-1. browser_navigate("http://localhost:<port>/wp-login.php")
-2. browser_snapshot()  — locate the user_login and user_pass inputs
-3. browser_fill_form([
-     {name: "Username", ref: "<user_login ref>", value: "admin"},
-     {name: "Password", ref: "<user_pass ref>", value: "password"},
-   ])
-4. browser_click("Log In button", "<submit ref>")
-5. browser_wait_for({text: "Dashboard"})  — or any post-login marker
-```
+If a repro requires logging in as a non-admin user, omit `login=yes` from the URL, seed the user via a `runPHP` Blueprint step (see `references/blueprint-recipes.md` § Users and roles), and have the plan log in via the form: navigate to `/wp-login.php`, fill `user_login` + `user_pass`, click submit, wait for `Dashboard`. This is rare and must be called out explicitly in the plan.
 
-Treat the login flow as setup noise: do not include it in the report's execution log unless it fails. A login failure is itself a `Could not execute` outcome.
+Treat any login (auto or manual) as setup noise: do not include it in the report's execution log unless it fails. A failure on the initial navigation that prevents login is itself a `Could not execute` outcome.
 
 ## Accessibility snapshots vs screenshots
 
@@ -58,26 +49,32 @@ Use `browser_take_screenshot()` only at the moments the SKILL prescribes:
 - One bug-state screenshot when an attempt reproduces (saved to `<temp-dir>/bug-state.png`).
 - One final-state screenshot from the last attempt when the overall verdict is `Not reproduced` or `Could not execute` (saved to `<temp-dir>/final-state.png`).
 
-**Path sandbox.** Playwright MCP only accepts file paths inside the project root or `.playwright-mcp/`; `/tmp/...` is rejected. Pass a project-relative filename to `browser_take_screenshot` (e.g., `bug-state.png`), then `mv` the file into the report temp dir after the call returns. The same sandbox applies to `browser_file_upload` — see `references/wp-env-recipes.md` § Playground fallbacks.
+**Path sandbox.** Playwright MCP only accepts file paths inside the project root or `.playwright-mcp/`; `/tmp/...` is rejected. Pass a project-relative filename to `browser_take_screenshot` (e.g., `bug-state.png`), then `mv` the file into the workspace dir after the call returns. The same sandbox applies to `browser_file_upload` — see `references/blueprint-recipes.md` § Last-resort UI fallback.
 
 ## Common editor entry points
 
-| Goal                          | URL                                                            |
-| ----------------------------- | -------------------------------------------------------------- |
-| New post (post editor)        | `http://localhost:<port>/wp-admin/post-new.php`                  |
-| Edit existing post by ID      | `http://localhost:<port>/wp-admin/post.php?post=<ID>&action=edit` |
-| New page                      | `http://localhost:<port>/wp-admin/post-new.php?post_type=page`   |
-| Site editor                   | `http://localhost:<port>/wp-admin/site-editor.php`               |
-| Widgets screen                | `http://localhost:<port>/wp-admin/widgets.php`                   |
-| Navigation editor             | `http://localhost:<port>/wp-admin/site-editor.php?path=/navigation` |
-| Pattern editor                | `http://localhost:<port>/wp-admin/site-editor.php?path=/patterns` |
+Set these as the Playground `url=` query param (or `landingPage` in the Blueprint) when building the URL in SKILL.md Step 5. Inside the running Playground page, in-app navigation works the same way as a real WordPress install — the host is always `https://playground.wordpress.net/` but the inner path is what matters.
+
+| Goal                          | Landing path                                |
+| ----------------------------- | ------------------------------------------- |
+| New post (post editor)        | `/wp-admin/post-new.php`                    |
+| Edit existing post by ID      | `/wp-admin/post.php?post=<ID>&action=edit`  |
+| New page                      | `/wp-admin/post-new.php?post_type=page`     |
+| Site editor                   | `/wp-admin/site-editor.php`                 |
+| Widgets screen                | `/wp-admin/widgets.php`                     |
+| Navigation editor             | `/wp-admin/site-editor.php?path=/navigation`|
+| Pattern editor                | `/wp-admin/site-editor.php?path=/patterns`  |
 
 ## Editor stability waits
 
-The Gutenberg editor mounts asynchronously after initial DOM. Adding blocks before it's ready leads to flaky failures that look like bugs. After navigation:
+The Gutenberg editor mounts asynchronously after initial DOM. Adding blocks before it's ready leads to flaky failures that look like bugs. On hosted Playground the first navigation also incurs a WASM cold start (downloading PHP + WordPress + the Gutenberg branch ZIP), so the first wait is materially longer than on a local server.
 
-1. `browser_wait_for({text: "Add title"})` for the post editor — title placeholder is one of the last things to mount.
-2. For the site editor, `browser_wait_for({text: "Saved"})` or wait for the canvas iframe to settle.
+After the **initial** navigation:
+
+1. `browser_wait_for({text: "Add title", time: 30})` for the post editor — title placeholder is one of the last things to mount. The 30-second budget covers Playground's cold start.
+2. For the site editor, `browser_wait_for({text: "Saved", time: 30})` or wait for the canvas iframe to settle.
+
+After **subsequent** in-app navigations (no cold start), drop the budget to the default 10-second per-step timeout.
 
 If the issue itself is "the editor never loads," skip these waits — that's exactly the bug.
 
@@ -117,8 +114,8 @@ Include method, URL, status, and the response body excerpt if available.
 
 ## Timeouts
 
-- Per step: 10 seconds. Apply via the tool's natural timeout or by passing `{time: 10}` to `browser_wait_for` where appropriate.
-- Per attempt: 90 seconds wall clock from "start login" to "observed result." If the attempt exceeds this cap, record `timeout (step <n>)` and proceed to the next attempt.
+- Per step: 10 seconds. Apply via the tool's natural timeout or by passing `{time: 10}` to `browser_wait_for` where appropriate. The first post-navigation wait is the exception: budget 30 seconds for Playground's WASM cold start (see "Editor stability waits").
+- Per attempt: 120 seconds wall clock from "start navigation" to "observed result." If the attempt exceeds this cap, record `timeout (step <n>)` and proceed to the next attempt.
 
 A step timing out is recorded with the step number — that pointer is the most useful piece of debugging info in a `Could not execute` report.
 
