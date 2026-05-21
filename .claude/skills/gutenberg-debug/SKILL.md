@@ -24,7 +24,7 @@ The same as the underlying skills:
 
 - Current working directory is the WordPress/Gutenberg checkout.
 - `gh` CLI authenticated.
-- Playwright MCP tools available (`mcp__plugin_playwright_playwright__*`).
+- Playwright MCP tools available (`mcp__plugin_playwright_playwright__*`) — required by `/gutenberg-repro` to drive the browser. `/gutenberg-fix` itself does not use MCP.
 - Node, npm, composer installed.
 
 If any prerequisite is missing, stop and tell the user — same as the underlying skills would.
@@ -57,13 +57,13 @@ In every non-`Reproduced` case, print a one-line summary plus the path to `repor
 
 Follow the workflow in `../gutenberg-fix/SKILL.md`, passing the absolute path to `report.md` captured in Step 1 as the `target` argument.
 
-This means the diagnosis checkpoint in `/gutenberg-fix` Step 4 is still active — the user approves the hypothesis before any code changes. The orchestrator does not bypass it. If you find yourself looking for a way to skip the checkpoint, stop: it's the safety gate that the whole trio's design depends on.
+This means `/gutenberg-fix`'s Step 4 checkpoint is still active — it is parameterised by confidence: high-confidence diagnoses with no architectural smells proceed straight to worktree exploration (N=1), while low-confidence or smell-flagged ones pause for the user to choose between parallel exploration of alternatives, picking a single candidate, pushing back, or aborting. The orchestrator does not bypass any of this. If you find yourself looking for a way to skip the checkpoint, stop: it's the safety gate that the whole trio's design depends on.
 
 ### Step 4 — Final summary
 
 After `/gutenberg-fix` completes (success, Tier-1 fallback, or Stuck), print a single short summary to the conversation:
 
-- One line: the combined verdict, e.g. `Reproduced → Fixed (1 iteration, branch fix/issue-12345)`.
+- One line: the combined verdict, e.g. `Reproduced → Fixed (3 worktrees explored in parallel, 1 green, branch fix/issue-12345)` or `Reproduced → Fixed (1 worktree, branch fix/issue-12345)`.
 - The absolute path to `fix-report.md`.
 - The absolute path to the original `report.md` for context.
 
