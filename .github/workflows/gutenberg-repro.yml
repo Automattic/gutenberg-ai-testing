@@ -26,10 +26,13 @@ jobs:
             TARGET_REPO: ${{ github.repository }}
         steps:
             - name: Guard missing ANTHROPIC_API_KEY
-              if: ${{ secrets.ANTHROPIC_API_KEY == '' }}
+              env:
+                  ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
               run: |
-                  echo "::error::ANTHROPIC_API_KEY is not configured; cannot run repro."
-                  exit 1
+                  if [ -z "${ANTHROPIC_API_KEY:-}" ]; then
+                      echo "::error::ANTHROPIC_API_KEY is not configured; cannot run repro."
+                      exit 1
+                  fi
 
             - name: Acknowledge label with eyes reaction
               env:
