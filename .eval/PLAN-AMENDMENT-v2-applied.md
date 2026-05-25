@@ -1,6 +1,8 @@
-# PLAN amendment v2 — proposed
+# PLAN amendment v2 — applied (superseded)
 
-**Status:** PROPOSAL. Not in effect. Requires user accept before the round runner reads it. On accept: fold into `PLAN.md` as decisions 16–21 + the listed amendments, then mark this file `superseded`.
+**Status:** SUPERSEDED. Retained for forensic reference only. The canonical version of decisions 16–20 (and the amendments to 5, 9, 14) lives in `.eval/PLAN.md`. If this file disagrees with `PLAN.md`, `PLAN.md` wins.
+
+Applied in the commit that introduced the `-applied` suffix on this filename. The integration into `PLAN.md`, the new aggregate keys + `soft_regressions:` block in `templates/judge-prompt.md`, and the template "frozen-since-v2-amendment" stamp all land in that same commit.
 
 ## Motivation
 
@@ -118,7 +120,7 @@ To rank candidates before admitting them:
 
 5. **Ground-truth note:** the user records each admitted issue's predicted verdict in `templates/corpus.md` (and any corpus-tolerated alternatives, mirroring 78625's "Valid or Insufficient"). The judge enforces verdicts against this; not against the cold-read result.
 
-### 20. Simplification edits are a first-class round outcome
+### 19. Simplification edits are a first-class round outcome
 
 After 10 rounds the loop has only ever ADDED to `SKILL.md` — current size is 229 lines, up from the round-0 baseline. Some accreted rules may be redundant, over-specific, or generalisable. Three explicit edit shapes are now allowed:
 
@@ -160,7 +162,7 @@ The round-runner records in `summary.md`:
 
 This gives the loop a running ledger of the skill's size and a way to detect "accidentally one-way-additive" drift in future eval sessions.
 
-### 21. When to trigger a corpus expansion event
+### 20. When to trigger a corpus expansion event
 
 This is a heuristic, not a hard rule:
 
@@ -180,7 +182,7 @@ Do NOT expand:
 2. Main agent (or user) folds amendments into `PLAN.md`:
    - Edit decision 5 to point to the new aggregates section.
    - Edit decision 9 to add the `soft_regressions` block.
-   - Append decisions 16–21.
+   - Append decisions 16–20.
 3. Edit `templates/judge-prompt.md`:
    - Add the new aggregate keys under `aggregates.train` and `aggregates.holdout`.
    - Add a top-level `soft_regressions:` list to the YAML.
@@ -191,7 +193,7 @@ Do NOT expand:
 
 ## What the user does next, in order
 
-1. Review this file. Push back on any of decisions 16–21.
+1. Review this file. Push back on any of decisions 16–20.
 2. If accepting in principle: run `.eval/scripts/prefilter-candidates.sh` to produce a ranked list. (Takes ~30 seconds + ~30 `gh` calls.)
 3. Glance at the top 20–30 candidates in `.eval/candidates/prefilter.tsv` and sanity-check the shapes.
 4. Run `.eval/scripts/score-candidates.sh` to cold-read the top 20–30. (Costs ~80–120 dispatches; comparable to 2–3 full rounds.)
