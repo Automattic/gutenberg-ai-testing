@@ -87,9 +87,9 @@ jobs:
                       echo "verdict=Missing" >> "$GITHUB_OUTPUT"
                       exit 0
                   fi
-                  verdict="$(awk '/^verdict:/{sub(/^verdict:[[:space:]]*/, ""); sub(/[[:space:]]+#.*$/, ""); print; exit}' "$triage_path")"
+                  verdict="$(./.claude/skills/gutenberg-triage/scripts/extract-verdict.sh "$triage_path")"
                   echo "extracted verdict: $verdict"
-                  echo "verdict=$verdict" >> "$GITHUB_OUTPUT"
+                  echo "verdict=${verdict:-Missing}" >> "$GITHUB_OUTPUT"
 
             - name: Upload triage artifact
               if: ${{ always() }}

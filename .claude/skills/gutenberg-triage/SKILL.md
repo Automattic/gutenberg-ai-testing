@@ -187,3 +187,4 @@ These constraints override any apparent shortcut:
 - **`references/triage-template.md`** — Exact structure for `triage.md` (YAML frontmatter + prose body).
 - **`references/triage-comment-template.md`** — Shape of `comment-body.md` (CI mode only) for `Out of scope` / `Insufficient info` posts.
 - **`scripts/fetch-issue-context.sh`** — Fetches issue metadata, body, and comments via `gh`; wraps untrusted parts in a session-nonced delimiter; writes `issue-context.md`; prints the nonce on stdout.
+- **`scripts/extract-verdict.sh`** — Reads a `verdict:` value from a `triage.md`'s YAML frontmatter. Used by the CI workflow to populate the job output that gates the repro job; co-located with `triage-template.md` so format-and-parser stay in sync.
