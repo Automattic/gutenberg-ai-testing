@@ -124,12 +124,17 @@ Produce a structured plan with these fields:
 
 **Image-derived observations must be re-stated as text.** `/gutenberg-repro` should not need to open `issue-context.md` or the downloaded images to act on the plan. Replace any "see image-1.png" wording with the observation itself (e.g., "the toolbar is rendered above the canvas instead of attached to the block").
 
-Mark confidence `low` when any of these apply:
+Mark confidence `low` whenever **any** of these is true (one trigger is enough — do not require multiple):
 
-- The issue body is vague ("it's broken", "doesn't work") without steps.
+- The issue body lacks numbered, step-by-step repro instructions, or is vague ("it's broken", "doesn't work").
+- The theme is unspecified, "Not sure", "unknown", "default", or otherwise vague.
+- The WordPress or Gutenberg version is unspecified or fictional ("WP 7" with no minor, "latest", "current").
+- Commenters disagree on whether the bug reproduces, persists across reloads, or has already been fixed.
 - Body and comments contradict each other on what reproduces the bug.
 - The plan requires guessing which block, screen, or page is meant.
 - Image attachments were the primary evidence but show ambiguous state.
+
+Screenshots and short videos are **not** high-confidence signals on their own — they evidence the bug's existence but say nothing about the reproducibility of the path that produced it. If the body is missing repro steps, theme, or version, set `confidence: low` regardless of how many images are attached. Reserve `high` for issues that have explicit reproduction steps **and** specified environment (theme + WP/Gutenberg version) **and** no unresolved disagreement in comments.
 
 If no actionable plan can be synthesized (truly empty body, "fix the editor please" content), write `triage.md` with verdict **Insufficient info** and stop.
 
