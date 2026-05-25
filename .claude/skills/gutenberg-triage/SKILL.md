@@ -143,6 +143,7 @@ Mark confidence `low` whenever **any** of these is true (one trigger is enough â
 - Body and comments contradict each other on what reproduces the bug.
 - The plan requires guessing which block, screen, or page is meant.
 - Image attachments were the primary evidence but show ambiguous state.
+- A maintainer or core contributor has confirmed in comments that the behaviour is intentional (e.g., "Yes, this is intentional", "this is a design call", "as expected"), even when the issue carries a `[Type] Regression` or `[Type] Bug` label.
 
 Screenshots and short videos are **not** high-confidence signals on their own â€” they evidence the bug's existence but say nothing about the reproducibility of the path that produced it. If the body is missing repro steps, theme, or version, set `confidence: low` regardless of how many images are attached. Reserve `high` for issues that have explicit reproduction steps **and** specified environment (theme + WP/Gutenberg version) **and** no unresolved disagreement in comments.
 
