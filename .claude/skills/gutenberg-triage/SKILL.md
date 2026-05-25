@@ -167,6 +167,8 @@ mkdir -p /tmp/gutenberg-repro/<issue-number>-<YYYYMMDD-HHMMSS>/
 
 Rewrite any offending section before writing the file. Skip this audit only when no images were downloaded.
 
+**Pre-write confidence audit.** Before rendering `triage.md`, if the planned `confidence` is `high`, scan the issue's comments once for maintainer/core-contributor statements characterising the behaviour as intentional or by-design (e.g., "intentional", "by design", "as expected", "design call"). If any such statement is present, downgrade `confidence` to `low` before writing the file. The verdict remains `Valid bug candidate` — do not change the verdict.
+
 Render `triage.md` using the structure in `references/triage-template.md`. The body **must** use these seven section headings, in this order, with these exact names (case-sensitive, no synonyms, no additions, no omissions — `/gutenberg-repro` parses these exact headings):
 
 1. `## Verdict reasoning`
