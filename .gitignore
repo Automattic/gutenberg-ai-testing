@@ -64,3 +64,8 @@ packages/react-native-editor/src/setup-local.js
 
 # Playwright MCP scratch directory (console logs, snapshots, screenshots)
 .playwright-mcp/
+
+# Eval workspace (gutenberg-triage improvement loop)
+.eval/round-*/
+.eval/summary.md
+
