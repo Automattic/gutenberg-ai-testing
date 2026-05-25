@@ -160,6 +160,13 @@ mkdir -p /tmp/gutenberg-repro/<issue-number>-<YYYYMMDD-HHMMSS>/
 
 **In CI mode:** use `$GUTENBERG_REPRO_WORKSPACE/<issue-number>-<YYYYMMDD-HHMMSS>/` instead. The workflow uploads this directory as an artifact, so any path under `$GUTENBERG_REPRO_WORKSPACE` is preserved.
 
+**Pre-write image audit.** Before rendering `triage.md`, walk every downloaded image once and verify:
+
+1. The planned `Actual (reported)` (and `Expected`/`Steps` if relevant) describes the depicted UI state in plain text — not the filename, not "screenshot attached".
+2. The image's filename appears, if at all, only inside `Notes`.
+
+Rewrite any offending section before writing the file. Skip this audit only when no images were downloaded.
+
 Render `triage.md` using the structure in `references/triage-template.md`. The body **must** use these seven section headings, in this order, with these exact names (case-sensitive, no synonyms, no additions, no omissions — `/gutenberg-repro` parses these exact headings):
 
 1. `## Verdict reasoning`
