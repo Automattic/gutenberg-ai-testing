@@ -19,8 +19,10 @@ import {
 /**
  * Internal dependencies
  */
+import { computeGridModelChange } from '../utils/grid-model-change';
 import type {
 	ResolveWidgetModule,
+	WidgetGridModel,
 	WidgetGridSettings,
 	DashboardWidget,
 	WidgetType,
@@ -117,13 +119,24 @@ interface InternalDashboardContextValue {
 
 	/**
 	 * Publishes staged slices that differ from their committed
-	 * counterparts, then exits edit mode. Best-effort atomic: no
-	 * rollback if a callback throws.
+	 * counterparts. By default also exits edit mode; pass
+	 * `{ exitEditMode: false }` when committing from the layout
+	 * settings drawer so customize mode stays active.
 	 */
-	commit: () => void;
+	commit: ( options?: { exitEditMode?: boolean } ) => void;
 
-	/** Reverts both staging slices and exits edit mode. */
-	cancel: () => void;
+	/**
+	 * Switches the layout model, updates staging, and publishes
+	 * immediately — equivalent to changing the model in layout
+	 * settings and clicking Save.
+	 */
+	commitGridModelChange: ( targetModel: WidgetGridModel ) => void;
+
+	/**
+	 * Reverts both staging slices. By default also exits edit mode; pass
+	 * `{ exitEditMode: false }` when dismissing the layout settings drawer.
+	 */
+	cancel: ( options?: { exitEditMode?: boolean } ) => void;
 
 	hasUncommittedChanges: boolean;
 	editMode: boolean;
@@ -269,31 +282,68 @@ export function WidgetDashboardProvider( {
 
 	const hasUncommittedChanges = hasLayoutChanges || hasGridSettingsChanges;
 
-	const commit = useCallback( () => {
-		if ( hasLayoutChanges ) {
-			onLayoutChange( canonicalize( stagingLayout ) );
-		}
+	const commit = useCallback(
+		( options?: { exitEditMode?: boolean } ) => {
+			if ( hasLayoutChanges ) {
+				onLayoutChange( canonicalize( stagingLayout ) );
+			}
 
-		if ( hasGridSettingsChanges ) {
-			onGridSettingsChange?.( stagingGridSettings );
-		}
+			if ( hasGridSettingsChanges ) {
+				onGridSettingsChange?.( stagingGridSettings );
+			}
 
-		onEditChange?.( false );
-	}, [
-		hasLayoutChanges,
-		hasGridSettingsChanges,
-		onLayoutChange,
-		onGridSettingsChange,
-		stagingLayout,
-		stagingGridSettings,
-		onEditChange,
-	] );
+			if ( options?.exitEditMode !== false ) {
+				onEditChange?.( false );
+			}
+		},
+		[
+			hasLayoutChanges,
+			hasGridSettingsChanges,
+			onLayoutChange,
+			onGridSettingsChange,
+			stagingLayout,
+			stagingGridSettings,
+			onEditChange,
+		]
+	);
 
-	const cancel = useCallback( () => {
-		setStagingLayout( committedLayout );
-		setStagingGridSettings( committedGridSettings );
-		onEditChange?.( false );
-	}, [ committedLayout, committedGridSettings, onEditChange ] );
+	const cancel = useCallback(
+		( options?: { exitEditMode?: boolean } ) => {
+			setStagingLayout( committedLayout );
+			setStagingGridSettings( committedGridSettings );
+			if ( options?.exitEditMode !== false ) {
+				onEditChange?.( false );
+			}
+		},
+		[ committedLayout, committedGridSettings, onEditChange ]
+	);
+
+	const commitGridModelChange = useCallback(
+		( targetModel: WidgetGridModel ) => {
+			const next = computeGridModelChange( {
+				layout: stagingLayout,
+				gridSettings: stagingGridSettings,
+				targetModel,
+			} );
+
+			if ( ! next ) {
+				return;
+			}
+
+			setStagingLayout( next.layout );
+			setStagingGridSettings( next.gridSettings );
+			onLayoutChange( canonicalize( next.layout ) );
+			onGridSettingsChange?.( next.gridSettings );
+			onEditChange?.( false );
+		},
+		[
+			stagingLayout,
+			stagingGridSettings,
+			onLayoutChange,
+			onGridSettingsChange,
+			onEditChange,
+		]
+	);
 
 	const resetGridSettings = useCallback( () => {
 		setStagingGridSettings( DEFAULT_GRID );
@@ -323,6 +373,7 @@ export function WidgetDashboardProvider( {
 			canEditGridSettings,
 			resetGridSettings,
 			commit,
+			commitGridModelChange,
 			cancel,
 			hasUncommittedChanges,
 			editMode,
@@ -337,6 +388,7 @@ export function WidgetDashboardProvider( {
 			canEditGridSettings,
 			resetGridSettings,
 			commit,
+			commitGridModelChange,
 			cancel,
 			hasUncommittedChanges,
 			editMode,
