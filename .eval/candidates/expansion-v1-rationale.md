@@ -2,7 +2,7 @@
 
 **Date:** 2026-05-25 (generated during the round-11 prep session).
 **Status:** Applied to `.eval/templates/corpus.md` but **not yet committed**. Pending user review.
-**Depends on:** PLAN amendment v2 (decisions 16, 17, 18, 21). Amendment is proposed in `.eval/PLAN-AMENDMENT-v2.md`; this expansion event assumes it is being adopted.
+**Depends on:** PLAN amendment v2 (decisions 16, 17, 18, 20). Amendment is proposed in `.eval/PLAN-AMENDMENT-v2.md`; this expansion event assumes it is being adopted.
 
 ## Why expand now
 
@@ -12,7 +12,7 @@ After round 10 the four headline metrics the round runner gates on are saturated
 - train consistency_3of3: 7/7
 - holdout verdict_correctness_haiku: 9/9
 
-The 12-dimension rubric still grades meaningful headroom (most haiku runs are `good` where opus is `excellent`; image_observations_restated 10/15; calibration 19/21). But that signal is invisible to the regression check, so the round runner has nothing actionable to chase. Two structural moves are needed: widen the scoring surface (proposed in amendment v2 decision 5 + 9), and expand the corpus to include shapes the current 10 don't cover (amendment v2 decisions 16, 17, 18, 21).
+The 12-dimension rubric still grades meaningful headroom (most haiku runs are `good` where opus is `excellent`; image_observations_restated 10/15; calibration 19/21). But that signal is invisible to the regression check, so the round runner has nothing actionable to chase. Two structural moves are needed: widen the scoring surface (proposed in amendment v2 decision 5 + 9), and expand the corpus to include shapes the current 10 don't cover (amendment v2 decisions 16, 17, 18, 20).
 
 This document is for the second move only.
 

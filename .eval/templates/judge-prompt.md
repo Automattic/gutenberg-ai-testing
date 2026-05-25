@@ -1,6 +1,6 @@
 # Judge prompt template — gutenberg-triage eval loop
 
-The parent fills `{{ROUND}}`, `{{ROUND_DIR}}`, `{{OUTPUT_PATH}}`, `{{CORPUS_PATH}}`, `{{PRIOR_AGGREGATES_PATH}}`. Body is byte-identical across rounds (templates frozen for the loop's duration unless calibration spot-check demands a judge-prompt edit at round 0).
+The parent fills `{{ROUND}}`, `{{ROUND_DIR}}`, `{{OUTPUT_PATH}}`, `{{CORPUS_PATH}}`, `{{PRIOR_AGGREGATES_PATH}}`. Body is frozen-since-v2-amendment across rounds (templates do not change unless an explicit further amendment is applied).
 
 ---
 
@@ -64,6 +64,20 @@ Compare current aggregates vs `{{PRIOR_AGGREGATES_PATH}}`. Set `regression_check
 
 For each triggered reason, add one short string to `reasons`. If none trigger, `triggered: false`, `reasons: []`.
 
+**Simplification commits are graded stricter (per PLAN decision 19).** If the round-N commit subject begins with `round-N: SIMPLIFY:`, the regression check ALSO triggers (set `triggered: true`, add reason `"simplification soft-signal drop"`) on ANY drop in `image_observations_restated_done` numerator OR `confidence_calibration_correct` numerator OR any `excellent_rate` numerator vs the prior round. For non-simplification commits these drops feed `soft_regressions` only (see next section). The judge identifies whether the commit is a simplification by reading `git log -1 --format=%s` of the round-N commit.
+
+## Soft-regression rules (observability, no auto-revert)
+
+In addition to `regression_check`, emit a top-level `soft_regressions: [...]` list. Each entry is a short string describing one soft trigger. Soft triggers fire when any of these drops vs the prior round:
+
+- `image_observations_restated_done` numerator drops by ≥2 (e.g., 10/15 → 8/15 = trigger).
+- `confidence_calibration_correct` numerator drops by ≥2.
+- Any `excellent_rate` numerator (steps_quality, preconditions_completeness, code_findings_quality, verdict_reasoning_quality) drops by ≥3.
+
+Soft triggers do NOT cause auto-revert (decision 9). The round runner reads `soft_regressions` to inform the next-round action only. If `soft_regressions` is empty, emit `soft_regressions: []`.
+
+**Re-baseline rule (decision 16):** if `{{PRIOR_AGGREGATES_PATH}}` corresponds to a round prior to a corpus expansion event, OR if the corpus has changed size between that round and this one, set `regression_check.triggered: false` and `reasons: ["post-expansion re-baseline"]` unconditionally; also set `soft_regressions: ["post-expansion re-baseline"]`. The judge identifies expansion events by reading `git log iterate-skill-triage --oneline` for commits whose subject begins with `corpus:`.
+
 ## Output shape
 
 Write YAML frontmatter + markdown body to `{{OUTPUT_PATH}}`. Frontmatter must be machine-parseable. Use double-quoted issue keys (issue numbers are strings in the YAML to avoid octal interpretation).
@@ -87,12 +101,22 @@ grades:
     ...
 aggregates:
   train:
+    # Hard-regression aggregates (decision 9)
     verdict_correctness_haiku: "6/7"
     rigid_rules_compliance_haiku: "7/7"
     consistency_3of3: 5
     consistency_2of3: 1
     consistency_1of3: 1
     consistency_0of3: 0
+    # Soft-signal aggregates (decision 5, amended v2). Denominators are
+    # haiku run-level; `na` runs excluded from both numerator and denominator.
+    confidence_calibration_correct: "N/M"          # over Valid-bug runs
+    image_observations_restated_done: "N/M"        # over runs where issue has images
+    injection_handling_done: "N/M"                  # over runs where applicable
+    steps_quality_excellent_rate: "N/M"             # over Valid-bug runs
+    preconditions_completeness_excellent_rate: "N/M"
+    code_findings_quality_excellent_rate: "N/M"
+    verdict_reasoning_quality_excellent_rate: "N/M" # over all runs
   holdout:
     verdict_correctness_haiku: "3/3"
     rigid_rules_compliance_haiku: "3/3"
@@ -100,9 +124,18 @@ aggregates:
     consistency_2of3: 1
     consistency_1of3: 0
     consistency_0of3: 0
+    confidence_calibration_correct: "N/M"
+    image_observations_restated_done: "N/M"
+    injection_handling_done: "N/M"
+    steps_quality_excellent_rate: "N/M"
+    preconditions_completeness_excellent_rate: "N/M"
+    code_findings_quality_excellent_rate: "N/M"
+    verdict_reasoning_quality_excellent_rate: "N/M"
 regression_check:
   triggered: false
   reasons: []
+soft_regressions: []
+skill_lines_after_round: 229  # wc -l of .claude/skills/gutenberg-triage/SKILL.md at HEAD
 ---
 
 # Judge report — round {{ROUND}}
@@ -131,11 +164,13 @@ One short bullet per non-`na` dimension explaining the grade. One sentence each.
 
 ## Final message
 
-After writing `{{OUTPUT_PATH}}`, print the absolute path and these three values on separate lines:
+After writing `{{OUTPUT_PATH}}`, print the absolute path and these values on separate lines:
 
 - `regression_check.triggered`
 - `aggregates.train.verdict_correctness_haiku`
 - `aggregates.holdout.verdict_correctness_haiku`
+- `soft_regressions count: <N>` (the length of the `soft_regressions:` list)
+- `skill_lines_after_round: <N>`
 
 ## Constraints
 
