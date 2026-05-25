@@ -144,7 +144,7 @@ Mark confidence `low` whenever **any** of these is true (one trigger is enough �
 - The plan requires guessing which block, screen, or page is meant.
 - Image attachments were the primary evidence but show ambiguous state.
 
-Screenshots and short videos are **not** high-confidence signals on their own — they evidence the bug's existence but say nothing about the reproducibility of the path that produced it. If the body is missing repro steps, theme, or version, set `confidence: low` regardless of how many images are attached. Reserve `high` for issues that have explicit reproduction steps **and** specified environment (theme + WP/Gutenberg version) **and** no unresolved disagreement in comments.
+Screenshots and short videos are **not** high-confidence signals on their own — they evidence the bug's existence but say nothing about the reproducibility of the path that produced it. If the body is missing repro steps, theme, or version, set `confidence: low` regardless of how many images are attached. Reserve `high` for issues that have explicit reproduction steps **and** specified environment (theme + WP/Gutenberg version) **and** no unresolved disagreement in comments. If a maintainer or core contributor comment characterises the behaviour as intentional or by-design, set `confidence: low` — but the verdict remains `Valid bug candidate`; do not route the issue to `Out of scope` on that basis.
 
 If no actionable plan can be synthesized (truly empty body, "fix the editor please" content), write `triage.md` with verdict **Insufficient info** and stop.
 
