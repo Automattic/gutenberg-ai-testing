@@ -145,7 +145,19 @@ mkdir -p /tmp/gutenberg-repro/<issue-number>-<YYYYMMDD-HHMMSS>/
 
 **In CI mode:** use `$GUTENBERG_REPRO_WORKSPACE/<issue-number>-<YYYYMMDD-HHMMSS>/` instead. The workflow uploads this directory as an artifact, so any path under `$GUTENBERG_REPRO_WORKSPACE` is preserved.
 
-Render `triage.md` using the structure in `references/triage-template.md`. Copy any downloaded issue attachments into the same directory and reference them by relative path from the `Notes` section if useful. Print the absolute path to `triage.md` in the conversation, the verdict line, a one-line plan summary, and the next-action hint per the table below:
+Render `triage.md` using the structure in `references/triage-template.md`. The body **must** use these seven section headings, in this order, with these exact names (case-sensitive, no synonyms, no additions, no omissions — `/gutenberg-repro` parses these exact headings):
+
+1. `## Verdict reasoning`
+2. `## Preconditions`
+3. `## Steps`
+4. `## Expected`
+5. `## Actual (reported)`
+6. `## Code findings`
+7. `## Notes`
+
+Do not rename or substitute headings. Forbidden examples observed in practice: `## Summary`, `## Issue summary`, `## Reproduction plan`, `## Repro plan`, `## Confidence assessment`. For `Out of scope` and `Insufficient info` verdicts the body sections may be brief or contain `n/a`, but all seven headings must still be present in the order above.
+
+Copy any downloaded issue attachments into the same directory and reference them by relative path from the `Notes` section if useful. Print the absolute path to `triage.md` in the conversation, the verdict line, a one-line plan summary, and the next-action hint per the table below:
 
 | Verdict | Next-action hint (interactive only) |
 | --- | --- |
