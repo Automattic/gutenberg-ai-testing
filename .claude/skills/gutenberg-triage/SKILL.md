@@ -162,7 +162,7 @@ mkdir -p /tmp/gutenberg-repro/<issue-number>-<YYYYMMDD-HHMMSS>/
 
 **Pre-write image audit.** Before rendering `triage.md`, walk every downloaded image once and verify:
 
-1. The planned `Actual (reported)` (and `Expected`/`Steps` if relevant) describes the depicted UI state in plain text — not the filename, not "screenshot attached".
+1. The planned `Actual (reported)` (and `Expected`/`Steps` if relevant) describes the depicted UI state in plain text — not the filename (e.g., `image-1.png`), not a count (e.g., "the 10 screenshots show…", "two images downloaded"), not a pointer (e.g., "as shown in image-1", "the images demonstrate…"), not "screenshot attached". For comparison grids or before/after sets, name the specific delta the comparison evidences (which UI element differs and how).
 2. The image's filename appears, if at all, only inside `Notes`.
 
 Rewrite any offending section before writing the file. Skip this audit only when no images were downloaded.
