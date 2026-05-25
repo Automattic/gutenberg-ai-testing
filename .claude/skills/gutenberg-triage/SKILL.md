@@ -122,7 +122,17 @@ Produce a structured plan with these fields:
 - **Actual result (reported):** the buggy behavior the issue claims.
 - **Confidence:** `high` or `low`.
 
-**Image-derived observations must be re-stated as text.** `/gutenberg-repro` should not need to open `issue-context.md` or the downloaded images to act on the plan. Replace any "see image-1.png" wording with the observation itself (e.g., "the toolbar is rendered above the canvas instead of attached to the block").
+**Image observations — restate as text, never as filename references.** `/gutenberg-repro` should not need to open `issue-context.md` or the downloaded images to act on the plan. For every downloaded image:
+
+1. Describe the depicted UI state in plain text inside `Actual (reported)` — e.g., "the toolbar is rendered above the canvas instead of attached to the block", "the columns block shows two empty placeholders side-by-side with no inserter".
+2. The image's filename (`image-1.png`) may appear only in `Notes` as a pointer, never as a substitute for the description, and never inside `Actual (reported)`, `Expected`, or `Steps`.
+
+Forbidden patterns observed in practice — every one of these must be replaced by a depiction of what the screenshot shows:
+
+- `image-1.png saved`, `image-1.png downloaded`, `image-2.png attached`
+- `two images downloaded`, `three screenshots attached`, `images saved to workspace`
+- `see image-1.png`, `as shown in image-2.png`, `cf. image-3.png`
+- any reference to an image filename inside `Actual (reported)`, `Expected`, or `Steps` without an accompanying text description of the depicted state
 
 Mark confidence `low` whenever **any** of these is true (one trigger is enough — do not require multiple):
 
