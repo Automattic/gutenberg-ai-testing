@@ -76,3 +76,43 @@ These are documented for downstream consumers of the skill. None of them are bug
 - **Re-grade with a different model in the same harness.** The eval loop is model-agnostic; running rounds 0–N against Claude Sonnet 4.6 or 4.7 would surface a different failure-mode topology and may close the 76031 gap.
 
 End of report.
+
+
+---
+
+## Addendum: simplification rounds 15–17 (May 2026)
+
+A follow-up 3-round simplification pass (PLAN decision 19) on top of round-14's accepted SKILL.md. User-requested budget was 5 rounds (rounds 15–19); stopped after round 17.
+
+### Outcomes
+
+| Round | Edit | Outcome | `delta_lines` |
+| --- | --- | --- | --- |
+| 15 | Consolidate four Step-5 pre-write audits into one block with four numbered sub-audits | **ACCEPTED** | −3 (232 → 229) |
+| 16 | Generalise four Step-4 image-restatement forbidden-pattern bullets into one consolidated bullet | REVERTED | (−3 attempted, restored to 229) |
+| 17 | Remove the round-14 Step-4 linked-PR-draft / roadmap low-confidence bullet | REVERTED | (−1 attempted, restored to 229) |
+
+**Net `skill_lines_after_round`: 229 (down 3 from round-14's 232).** One simplification landed cleanly; two reverted.
+
+### Did the simplification thesis hold?
+
+Partially. The original hypothesis was **"the audit cluster has grown enough to dilute salience; consolidating it should free real headroom"**. Round 15 confirmed this for **structural consolidation**: collapsing four `**Pre-write X audit.** Before rendering triage.md, ...` block intros into a single "Pre-write audits" intro with four numbered sub-audits preserved the per-audit list structure while removing the prose-intro repetition. Train `image_observations_restated_done` jumped 8 → 13 (best in the loop's history); confidence calibration held flat; verdict ceiling held at 36/36. The hypothesis that consolidating sibling audits sharpens salience (rather than diluting it further) held cleanly.
+
+Rounds 16 and 17 disproved two corollaries:
+
+- **Round 16 (REVERTED):** "Flattening a list of explicit example tokens (4 bullets → 1 bullet) is equivalent to consolidating sibling audits." Image observations dropped 13 → 12 train, confidence calibration dropped 26 → 24, code_findings_excellent dropped 20 → 19 — all SIMPLIFY-strict triggers. The visible bullet count appears to matter for haiku's cue salience even when the underlying vocabulary is preserved as a parenthetical.
+- **Round 17 (REVERTED):** "A rule documented as ineffective on its primary target can be safely removed." The round-14 Step-4 linked-PR-draft / roadmap bullet was documented in this report as failing to move 76031 (its target) across all three round-14 runs. Removing it surfaced verdict-routing breakage on 78238 (run1 OOS — first verdict regression in this loop's history since round-9), confidence regressions on 76176 and 76534, and a 13 → 6 image-observations collapse. The bullet was load-bearing on sibling failure modes even though it did not move its named target.
+
+### Recommendation
+
+Ship **round-15's SKILL.md state (229 lines)** as a follow-up PR on top of `improve/gutenberg-triage-skill` (PR #14). The Step-5 audit consolidation is a clean, defensible improvement: it preserves every trigger token vocabulary verbatim, it shortens the skill by 3 lines, and it produces a measurable image-restatement-rate improvement that holds across the train and holdout splits without hurting any other metric.
+
+A branch `improve/gutenberg-triage-skill-simplified` has been prepared locally from `improve/gutenberg-triage-skill` HEAD with the round-15 edit cherry-picked on top. Push and open PR `Automattic/gutenberg-ai-testing#15` (or similar) when ready.
+
+Round-15's SKILL.md is the canonical "simplified" state. Rounds 16 and 17 are documented in `.eval/summary.md` as cautionary examples — the round-14 bullet stays, the Step-4 image-restatement list stays.
+
+### Operational notes for any future continuation
+
+- The simplification candidate surface is **near-exhausted** for the current natural-language rule shape. Remaining −1 line opportunities exist (e.g., trimming the "Forbidden examples observed in practice: `## Summary`, ..." sentence; this attempt was made and abandoned mid-round-17 because the sentence is part of a paragraph and removing it doesn't reduce `wc -l`). Any further simplification will likely require structural rewriting that's outside the current PLAN-decision-19 commit-shape contract.
+- The cluster-consolidation pattern from round 15 is reusable. If new audit-style rules are added later and the cluster grows to ≥5 sub-audits, consider re-consolidating.
+- The "remove an ineffective rule" pattern (round 17) is risky: rules can be load-bearing for sibling failure modes that aren't named in their commit message or in this report. Default to retaining rules.
