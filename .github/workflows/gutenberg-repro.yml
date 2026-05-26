@@ -69,6 +69,7 @@ jobs:
                   anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
                   github_token: ${{ github.token }}
                   claude_args: |
+                      --model haiku
                       --allowedTools Bash,Read,Write,Edit,Grep,Glob
                   prompt: |
                       Invoke the /gutenberg-triage skill against issue ${{ github.event.issue.html_url }}.
@@ -149,6 +150,7 @@ jobs:
                   anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
                   github_token: ${{ github.token }}
                   claude_args: |
+                      --model sonnet
                       --mcp-config '{"mcpServers":{"playwright":{"command":"npx","args":["-y","@playwright/mcp@${{ env.PLAYWRIGHT_MCP_VERSION }}"]}}}'
                       --allowedTools mcp__playwright__browser_navigate,mcp__playwright__browser_snapshot,mcp__playwright__browser_click,mcp__playwright__browser_type,mcp__playwright__browser_fill_form,mcp__playwright__browser_press_key,mcp__playwright__browser_evaluate,mcp__playwright__browser_wait_for,mcp__playwright__browser_console_messages,mcp__playwright__browser_network_requests,mcp__playwright__browser_take_screenshot,mcp__playwright__browser_close,Bash,Read,Write,Edit
                   prompt: |
