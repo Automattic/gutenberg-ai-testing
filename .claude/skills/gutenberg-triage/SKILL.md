@@ -122,14 +122,30 @@ Produce a structured plan with these fields:
 - **Actual result (reported):** the buggy behavior the issue claims.
 - **Confidence:** `high` or `low`.
 
-**Image-derived observations must be re-stated as text.** `/gutenberg-repro` should not need to open `issue-context.md` or the downloaded images to act on the plan. Replace any "see image-1.png" wording with the observation itself (e.g., "the toolbar is rendered above the canvas instead of attached to the block").
+**Image observations — restate as text, never as filename references.** `/gutenberg-repro` should not need to open `issue-context.md` or the downloaded images to act on the plan. For every downloaded image:
 
-Mark confidence `low` when any of these apply:
+1. Describe the depicted UI state in plain text inside `Actual (reported)` — e.g., "the toolbar is rendered above the canvas instead of attached to the block", "the columns block shows two empty placeholders side-by-side with no inserter".
+2. The image's filename (`image-1.png`) may appear only in `Notes` as a pointer, never as a substitute for the description, and never inside `Actual (reported)`, `Expected`, or `Steps`.
 
-- The issue body is vague ("it's broken", "doesn't work") without steps.
+Forbidden patterns observed in practice — every one of these must be replaced by a depiction of what the screenshot shows:
+
+- `image-1.png saved`, `image-1.png downloaded`, `image-2.png attached`
+- `two images downloaded`, `three screenshots attached`, `images saved to workspace`
+- `see image-1.png`, `as shown in image-2.png`, `cf. image-3.png`
+- any reference to an image filename inside `Actual (reported)`, `Expected`, or `Steps` without an accompanying text description of the depicted state
+
+Mark confidence `low` whenever **any** of these is true (one trigger is enough — do not require multiple):
+
+- The issue body lacks numbered, step-by-step repro instructions, or is vague ("it's broken", "doesn't work").
+- The theme is unspecified, "Not sure", "unknown", "default", or otherwise vague.
+- The WordPress or Gutenberg version is unspecified or fictional ("WP 7" with no minor, "latest", "current").
+- Commenters disagree on whether the bug reproduces, persists across reloads, or has already been fixed.
 - Body and comments contradict each other on what reproduces the bug.
+- A maintainer or core-contributor comment cites a linked PR that is in `draft` state, or links to a discussions/roadmap document (paths under `/discussions/`, `/projects/`, or the WordPress.org make blog) rather than a merged PR. The mechanism the reporter describes may exist in code, but the fix is roadmap-deferred rather than imminent.
 - The plan requires guessing which block, screen, or page is meant.
 - Image attachments were the primary evidence but show ambiguous state.
+
+Screenshots and short videos are **not** high-confidence signals on their own — they evidence the bug's existence but say nothing about the reproducibility of the path that produced it. If the body is missing repro steps, theme, or version, set `confidence: low` regardless of how many images are attached. Reserve `high` for issues that have explicit reproduction steps **and** specified environment (theme + WP/Gutenberg version) **and** no unresolved disagreement in comments. If a maintainer or core contributor comment characterises the behaviour as intentional or by-design, set `confidence: low` — but the verdict remains `Valid bug candidate`; do not route the issue to `Out of scope` on that basis.
 
 If no actionable plan can be synthesized (truly empty body, "fix the editor please" content), write `triage.md` with verdict **Insufficient info** and stop.
 
@@ -145,7 +161,29 @@ mkdir -p /tmp/gutenberg-repro/<issue-number>-<YYYYMMDD-HHMMSS>/
 
 **In CI mode:** use `$GUTENBERG_REPRO_WORKSPACE/<issue-number>-<YYYYMMDD-HHMMSS>/` instead. The workflow uploads this directory as an artifact, so any path under `$GUTENBERG_REPRO_WORKSPACE` is preserved.
 
-Render `triage.md` using the structure in `references/triage-template.md`. Copy any downloaded issue attachments into the same directory and reference them by relative path from the `Notes` section if useful. Print the absolute path to `triage.md` in the conversation, the verdict line, a one-line plan summary, and the next-action hint per the table below:
+**Pre-write audits.** Before rendering `triage.md`, walk the planned content once through each audit below and rewrite/downgrade if any trigger matches.
+
+1. **Image audit** (skip if no images downloaded). `Actual (reported)` (and `Expected`/`Steps` if relevant) must describe the depicted UI state in plain text — not the filename (e.g., `image-1.png`), not a count (e.g., "the 10 screenshots show…", "two images downloaded"), not a pointer (e.g., "as shown in image-1", "the images demonstrate…"), not "screenshot attached". For comparison grids or before/after sets, name the specific delta the comparison evidences (which UI element differs and how). The image's filename appears, if at all, only inside `Notes`.
+
+2. **Confidence audit.** If the planned `confidence` is `high`, scan the issue's comments AND any fetched linked-ref bodies (linked PRs/issues fetched in Step 3) for maintainer/core-contributor statements characterising the behaviour as intentional, by-design, or roadmap-deferred (e.g., "intentional", "by design", "as expected", "design call", "roadmap", "no current plan", "no short-term fix planned"). If any such statement is present, downgrade `confidence` to `low`. The verdict remains `Valid bug candidate` — do not change the verdict.
+
+3. **Anti-hypothesis audit.** Scan the planned `Notes` and `Code findings` sections for root-cause-shaped statements (e.g., "the root cause is…", "this happens because…", "appears to be a timing issue", "may be caused by…", "the bug manifests because…", "cascade conflict", "paint timing", "the browser briefly paints", "before … takes precedence", "specificity conflict"). If any are present, rewrite them as factual observations (what was grepped, what exists, what was changed when) — or remove them. Cause-and-effect synthesis belongs to `/gutenberg-fix`, never here.
+
+4. **Verdict-routing audit.** If the planned `verdict` is `Out of scope` AND the issue `state` is `open` AND labels include a bug-type label (`[Type] Bug`, `[Type] Regression`, or similar), scan the planned `Verdict reasoning` for maintainer/commenter framing tokens used to justify the Out-of-scope route — "intentional", "expected", "by design", "external", "third-party", "initialization paint", "browser-default", "not a Gutenberg bug". If any such token is the justification, rewrite as `verdict: Valid bug candidate` with `confidence: low`. Maintainer characterization of behaviour is a confidence-downgrade signal, not a verdict-routing signal — the Step-2 label-gate is the only path from an open `[Type] Bug` issue to `Out of scope`.
+
+Render `triage.md` using the structure in `references/triage-template.md`. The body **must** use these seven section headings, in this order, with these exact names (case-sensitive, no synonyms, no additions, no omissions — `/gutenberg-repro` parses these exact headings):
+
+1. `## Verdict reasoning`
+2. `## Preconditions`
+3. `## Steps`
+4. `## Expected`
+5. `## Actual (reported)`
+6. `## Code findings`
+7. `## Notes`
+
+Do not rename or substitute headings. Forbidden examples observed in practice: `## Summary`, `## Issue summary`, `## Reproduction plan`, `## Repro plan`, `## Confidence assessment`. For `Out of scope` and `Insufficient info` verdicts the body sections may be brief or contain `n/a`, but all seven headings must still be present in the order above.
+
+Copy any downloaded issue attachments into the same directory and reference them by relative path from the `Notes` section if useful. Print the absolute path to `triage.md` in the conversation, the verdict line, a one-line plan summary, and the next-action hint per the table below:
 
 | Verdict | Next-action hint (interactive only) |
 | --- | --- |
