@@ -141,6 +141,7 @@ Mark confidence `low` whenever **any** of these is true (one trigger is enough â
 - The WordPress or Gutenberg version is unspecified or fictional ("WP 7" with no minor, "latest", "current").
 - Commenters disagree on whether the bug reproduces, persists across reloads, or has already been fixed.
 - Body and comments contradict each other on what reproduces the bug.
+- A maintainer or core-contributor comment cites a linked PR that is in `draft` state, or links to a discussions/roadmap document (paths under `/discussions/`, `/projects/`, or the WordPress.org make blog) rather than a merged PR. The mechanism the reporter describes may exist in code, but the fix is roadmap-deferred rather than imminent.
 - The plan requires guessing which block, screen, or page is meant.
 - Image attachments were the primary evidence but show ambiguous state.
 
