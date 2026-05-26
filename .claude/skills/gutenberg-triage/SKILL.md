@@ -129,7 +129,10 @@ Produce a structured plan with these fields:
 
 Forbidden patterns observed in practice — every one of these must be replaced by a depiction of what the screenshot shows:
 
-- any reference to an image filename (e.g., `image-1.png saved`, `image-1.png downloaded`, `image-2.png attached`), a count (e.g., `two images downloaded`, `three screenshots attached`, `images saved to workspace`), a pointer (e.g., `see image-1.png`, `as shown in image-2.png`, `cf. image-3.png`), or "screenshot attached" — inside `Actual (reported)`, `Expected`, or `Steps`, without an accompanying text description of the depicted state
+- `image-1.png saved`, `image-1.png downloaded`, `image-2.png attached`
+- `two images downloaded`, `three screenshots attached`, `images saved to workspace`
+- `see image-1.png`, `as shown in image-2.png`, `cf. image-3.png`
+- any reference to an image filename inside `Actual (reported)`, `Expected`, or `Steps` without an accompanying text description of the depicted state
 
 Mark confidence `low` whenever **any** of these is true (one trigger is enough — do not require multiple):
 
