@@ -52,6 +52,8 @@ Use exact grade values listed; do not invent intermediate grades.
 
 12. **haiku_consistency** — per-issue derived: `3/3`, `2/3`, `1/3`, or `0/3` based on verdict agreement across the 3 haiku runs. Only applies to haiku (opus is 1 run).
 
+13. **haiku_confidence_agreement** — per-issue derived (amendment v3): `3/3`, `2/3`, `1/3`, `0/3`, or `na`. Read the `confidence:` value from each run's `triage.md` YAML frontmatter and count how many of the three runs share the same value. `na` when fewer than 3 haiku runs land on `Valid bug candidate` (the dimension is undefined off that branch). Not a grade dimension on individual runs — it is only emitted at the per-issue level alongside `haiku_consistency`.
+
 ## Regression-check rules
 
 Compare current aggregates vs `{{PRIOR_AGGREGATES_PATH}}`. Set `regression_check.triggered: true` if ANY of these:
@@ -73,6 +75,9 @@ In addition to `regression_check`, emit a top-level `soft_regressions: [...]` li
 - `image_observations_restated_done` numerator drops by ≥2 (e.g., 10/15 → 8/15 = trigger).
 - `confidence_calibration_correct` numerator drops by ≥2.
 - Any `excellent_rate` numerator (steps_quality, preconditions_completeness, code_findings_quality, verdict_reasoning_quality) drops by ≥3.
+- **Amendment v3:** `confidence_consistency_3of3` on **train** drops by ≥2 vs the prior round. (Holdout drops are observability only — they do not fire a soft trigger, matching the rest of the soft-signal scope.)
+
+`full_agreement_3of3` is observability only — no soft trigger (would double-count with verdict-consistency hard rule + confidence-consistency soft rule).
 
 Soft triggers do NOT cause auto-revert (decision 9). The round runner reads `soft_regressions` to inform the next-round action only. If `soft_regressions` is empty, emit `soft_regressions: []`.
 
@@ -95,6 +100,7 @@ grades:
     haiku_run2: {...}
     haiku_run3: {...}
     haiku_consistency: 3/3
+    haiku_confidence_agreement: na     # amendment v3 — `na` here because verdict is Out of scope (not Valid-bug) on all 3 runs
     opus: {verdict_correctness: correct, ...}
     opus_flagged_wrong: false
   "78625":
@@ -117,6 +123,11 @@ aggregates:
     preconditions_completeness_excellent_rate: "N/M"
     code_findings_quality_excellent_rate: "N/M"
     verdict_reasoning_quality_excellent_rate: "N/M" # over all runs
+    # Cross-run agreement aggregates (decision 21, amended v3). Counts of issues,
+    # not runs. Denominator is implicit — only count issues where the per-issue
+    # field is not `na`.
+    confidence_consistency_3of3: N                  # count of issues where all 3 haiku runs share the same confidence value (Valid-bug only); soft trigger fires if numerator drops ≥2 vs prior round
+    full_agreement_3of3: N                          # count of issues where verdict + confidence (when applicable) + rigid_rules_compliance all match across the 3 haiku runs; observability only (no soft trigger)
   holdout:
     verdict_correctness_haiku: "3/3"
     rigid_rules_compliance_haiku: "3/3"
@@ -131,6 +142,8 @@ aggregates:
     preconditions_completeness_excellent_rate: "N/M"
     code_findings_quality_excellent_rate: "N/M"
     verdict_reasoning_quality_excellent_rate: "N/M"
+    confidence_consistency_3of3: N                  # observability on holdout — no soft trigger
+    full_agreement_3of3: N
 regression_check:
   triggered: false
   reasons: []
