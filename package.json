@@ -102,6 +102,8 @@
 		"wait-on": "8.0.1"
 	},
 	"overrides": {
+		"form-data": "4.0.5",
+		"handlebars": "4.7.9",
 		"jsdom": "26.1.0"
 	},
 	"scripts": {
